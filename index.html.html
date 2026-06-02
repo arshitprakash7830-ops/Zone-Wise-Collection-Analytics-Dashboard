@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UCC Collection Analytics Dashboard — Mathura Vrindavan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #0f1626;
+    --card: #131d35;
+    --card2: #172040;
+    --border: #1e2d50;
+    --accent1: #00c9ff;
+    --accent2: #f5a623;
+    --accent3: #e84393;
+    --accent4: #4caf50;
+    --danger: #ff4757;
+    --warn: #ffa502;
+    --text: #e8edf8;
+    --muted: #7a8aaa;
+    --grid: rgba(30,45,80,0.5);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* ---- HEADER ---- */
+  .header {
+    background: linear-gradient(135deg, #0d1b3e 0%, #0a0e1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top:0; z-index: 100;
+  }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .logo-badge {
+    background: linear-gradient(135deg, var(--accent1), #0080ff);
+    color: #fff; font-family: 'Rajdhani', sans-serif;
+    font-size: 22px; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px; letter-spacing: 2px;
+  }
+  .header-title h1 {
+    font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700;
+    color: var(--text); letter-spacing: 1px;
+  }
+  .header-title p { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+  .header-right { display:flex; align-items:center; gap:10px; }
+  .live-badge {
+    display:flex; align-items:center; gap:6px;
+    background: rgba(76,175,80,0.15); border: 1px solid var(--accent4);
+    color: var(--accent4); font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--accent4); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  .export-btn {
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 6px; cursor:pointer;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .export-btn:hover { border-color: var(--accent1); color: var(--accent1); }
+
+  /* ---- NAV TABS ---- */
+  .nav-tabs {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; display:flex; gap:2px; overflow-x:auto;
+  }
+  .tab {
+    padding: 12px 18px; cursor:pointer; font-size: 12px; font-weight: 500;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    white-space: nowrap; transition: all 0.2s; letter-spacing: 0.3px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent1); border-bottom-color: var(--accent1); }
+
+  /* ---- FILTERS ---- */
+  .filter-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 24px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .filter-label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 1px; text-transform:uppercase; }
+  .filter-select {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 5px 10px; border-radius: 5px; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px; cursor:pointer; outline:none; transition: border-color 0.2s;
+  }
+  .filter-select:focus { border-color: var(--accent1); }
+  .filter-reset {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    padding: 5px 12px; border-radius: 5px; cursor:pointer; font-size: 12px; transition:all 0.2s;
+  }
+  .filter-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ---- MAIN ---- */
+  .main { padding: 20px 24px; }
+  .section { display:none; }
+  .section.active { display:block; }
+
+  /* ---- KPI CARDS ---- */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; margin-bottom: 22px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); border-color: #2a3d60; }
+  .kpi-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  }
+  .kpi-card.blue::before { background: linear-gradient(90deg, var(--accent1), #0080ff); }
+  .kpi-card.orange::before { background: linear-gradient(90deg, var(--accent2), #ff6b35); }
+  .kpi-card.pink::before { background: linear-gradient(90deg, var(--accent3), #9b59b6); }
+  .kpi-card.green::before { background: linear-gradient(90deg, var(--accent4), #00bcd4); }
+  .kpi-card.red::before { background: linear-gradient(90deg, var(--danger), #ff6b81); }
+  .kpi-card.warn::before { background: linear-gradient(90deg, var(--warn), #e74c3c); }
+  .kpi-icon { font-size: 22px; margin-bottom: 8px; }
+  .kpi-label { font-size: 10px; color: var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
+  .kpi-value {
+    font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700;
+    line-height: 1; color: var(--text);
+  }
+  .kpi-sub { font-size: 10px; color: var(--muted); margin-top: 5px; }
+  .kpi-sub span { color: var(--accent4); }
+
+  /* ---- GRID LAYOUTS ---- */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:18px; }
+  .grid-1-2 { display:grid; grid-template-columns:1fr 2fr; gap:16px; margin-bottom:18px; }
+  .grid-2-1 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:18px; }
+  @media (max-width:900px) {
+    .grid-2,.grid-3,.grid-1-2,.grid-2-1 { grid-template-columns:1fr; }
+  }
+
+  /* ---- CHART CARD ---- */
+  .chart-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+  }
+  .chart-card h3 {
+    font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.5px; margin-bottom: 4px; color: var(--text);
+  }
+  .chart-card .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+  .chart-wrap { position:relative; }
+
+  /* ---- TABLE ---- */
+  .table-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; overflow:hidden;
+  }
+  .table-card h3 {
+    font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 600;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    letter-spacing: 0.5px;
+  }
+  .table-wrap { overflow-x:auto; max-height: 400px; overflow-y:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead th {
+    padding: 10px 12px; font-size: 10px; font-weight: 600;
+    text-transform:uppercase; letter-spacing:1px; color: var(--muted);
+    background: var(--card2); border-bottom: 1px solid var(--border);
+    position: sticky; top:0; white-space:nowrap;
+  }
+  tbody tr { border-bottom: 1px solid rgba(30,45,80,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(0,201,255,0.04); }
+  tbody td { padding: 9px 12px; font-size: 12px; white-space:nowrap; }
+
+  /* ---- BADGES ---- */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .badge-green { background: rgba(76,175,80,0.15); color: var(--accent4); }
+  .badge-orange { background: rgba(245,166,35,0.15); color: var(--accent2); }
+  .badge-red { background: rgba(255,71,87,0.15); color: var(--danger); }
+  .badge-blue { background: rgba(0,201,255,0.15); color: var(--accent1); }
+
+  /* ---- PROGRESS BAR ---- */
+  .progress-wrap { background: rgba(30,45,80,0.6); border-radius:3px; height:6px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:3px; transition: width 1s ease; }
+
+  /* ---- GAUGE ---- */
+  .gauge-container { display:flex; align-items:center; justify-content:center; padding:10px; }
+  .gauge-wrap { position:relative; width:160px; height:90px; }
+
+  /* ---- RANK ITEM ---- */
+  .rank-list { padding: 0 16px 8px; }
+  .rank-item {
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 0; border-bottom: 1px solid rgba(30,45,80,0.4);
+  }
+  .rank-num {
+    width: 24px; height: 24px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:11px; font-weight:700; flex-shrink:0;
+  }
+  .rank-num.gold { background: rgba(245,166,35,0.2); color: var(--accent2); }
+  .rank-num.silver { background: rgba(189,195,199,0.2); color: #bdc3c7; }
+  .rank-num.bronze { background: rgba(230,126,34,0.2); color: #e67e22; }
+  .rank-num.other { background: rgba(30,45,80,0.6); color: var(--muted); }
+  .rank-info { flex:1; min-width:0; }
+  .rank-name { font-size: 12px; font-weight: 500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rank-bar-wrap { width:80px; }
+  .rank-val { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent1); text-align:right; min-width:70px; }
+
+  /* ---- AGING BUCKET ---- */
+  .aging-grid { display:flex; gap:10px; flex-wrap:wrap; padding: 14px 16px; }
+  .aging-bucket {
+    flex:1; min-width:100px; background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; text-align:center;
+  }
+  .aging-bucket .ab-label { font-size: 10px; color: var(--muted); margin-bottom:6px; }
+  .aging-bucket .ab-count { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; }
+  .aging-bucket .ab-amount { font-size:11px; margin-top:3px; }
+
+  /* ---- HEATMAP ---- */
+  .heatmap-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; padding: 14px;
+  }
+  .heatmap-cell {
+    border-radius: 8px; padding: 12px 10px; text-align:center;
+    transition: transform 0.2s;
+  }
+  .heatmap-cell:hover { transform: scale(1.03); }
+  .heatmap-cell .hc-ward { font-size: 10px; color: rgba(255,255,255,0.7); margin-bottom:4px; }
+  .heatmap-cell .hc-eff { font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700; color:#fff; }
+  .heatmap-cell .hc-label { font-size: 9px; color: rgba(255,255,255,0.6); }
+
+  /* ---- SECTION TITLE ---- */
+  .section-title {
+    font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700;
+    letter-spacing: 1px; margin-bottom: 16px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-title::after {
+    content:''; flex:1; height:1px; background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ---- SUPERVISOR CARD ---- */
+  .sup-card {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; display:flex; flex-direction:column; gap:8px;
+  }
+  .sup-name { font-size: 13px; font-weight: 600; }
+  .sup-stats { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+  .sup-eff { font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; height:5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  .text-right { text-align:right; }
+  .text-center { text-align:center; }
+  .text-green { color: var(--accent4); }
+  .text-red { color: var(--danger); }
+  .text-orange { color: var(--accent2); }
+  .text-blue { color: var(--accent1); }
+  .text-muted { color: var(--muted); }
+  
+  .flex-row { display:flex; gap:10px; align-items:center; }
+  .spacer { flex:1; }
+
+  .note-box {
+    background: rgba(0,201,255,0.05); border: 1px solid rgba(0,201,255,0.2);
+    border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .note-box strong { color: var(--accent1); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-badge">UCC</div>
+    <div class="header-title">
+      <h1>Collection Analytics Dashboard</h1>
+      <p>NAGAR NIGAM MATHURA VRINDAVAN &nbsp;|&nbsp; Urban Collection Command</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div> LIVE DATA</div>
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="export-btn" onclick="exportPDF()">⬇ Export PDF</button>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="tab active" onclick="showTab('executive')">📊 Executive Summary</div>
+  <div class="tab" onclick="showTab('ward')">🗺 Ward Analysis</div>
+  <div class="tab" onclick="showTab('customer')">👤 Customer / Aging</div>
+  <div class="tab" onclick="showTab('property')">🏠 Property Analysis</div>
+  <div class="tab" onclick="showTab('subtype')">🏷 Sub-Type Analysis</div>
+  <div class="tab" onclick="showTab('pending')">⚠ Pending Analytics</div>
+  <div class="tab" onclick="showTab('recovery')">📈 Recovery & Forecast</div>
+  <div class="tab" onclick="showTab('supervisor')">👔 Supervisor Performance</div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-bar">
+  <span class="filter-label">Filters:</span>
+  <select class="filter-select" id="f-ward" onchange="applyFilters()">
+    <option value="">All Wards</option>
+  </select>
+  <select class="filter-select" id="f-type" onchange="applyFilters()">
+    <option value="">All Property Types</option>
+    <option>Residential</option>
+    <option>Commercial</option>
+    <option>Institutional</option>
+    <option>Industrial</option>
+  </select>
+  <select class="filter-select" id="f-supervisor" onchange="applyFilters()">
+    <option value="">All Supervisors</option>
+  </select>
+  <select class="filter-select" id="f-status" onchange="applyFilters()">
+    <option value="">All Status</option>
+    <option value="defaulter">Defaulters Only</option>
+    <option value="paid">Cleared</option>
+  </select>
+  <button class="filter-reset" onclick="resetFilters()">✕ Reset</button>
+  <span style="margin-left:auto; font-size:11px; color:var(--muted);" id="filter-count">Showing all 53,780 records</span>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ============ EXECUTIVE SUMMARY ============ -->
+<div class="section active" id="sec-executive">
+  <div class="section-title">📊 Executive Summary</div>
+  
+  <div class="kpi-grid" id="kpi-grid">
+    <!-- KPIs injected by JS -->
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Collection vs Billed vs Pending — Ward Wise</h3>
+      <div class="chart-sub">₹ in Rupees | All 20 Wards</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="wardBarChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Property Type Distribution</h3>
+      <div class="chart-sub">By count of properties</div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="propTypePie"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Collection Efficiency Heatmap</h3>
+      <div class="chart-sub">Ward-wise efficiency % (darker = worse)</div>
+      <div id="heatmap-container"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Aging Bucket Distribution</h3>
+      <div class="chart-sub">Defaulters by days since last payment</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="agingChart"></canvas>
+      </div>
+      <div class="aging-grid" id="aging-buckets"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WARD ANALYSIS ============ -->
+<div class="section" id="sec-ward">
+  <div class="section-title">🗺 Ward-Wise Collection Analysis</div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Top 10 Wards — Highest Pending Amount</h3>
+      <div class="chart-sub">Outstanding dues in ₹</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="wardPendingChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Top 10 Wards — Best Collection Efficiency</h3>
+      <div class="chart-sub">Collection % against billed amount</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="wardEffChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Complete Ward-Wise Summary</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ward</th>
+            <th class="text-right">Properties</th>
+            <th class="text-right">Billed (₹)</th>
+            <th class="text-right">Collected (₹)</th>
+            <th class="text-right">Pending (₹)</th>
+            <th class="text-right">Efficiency</th>
+            <th class="text-right">Defaulters</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ward-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOMER / AGING ============ -->
+<div class="section" id="sec-customer">
+  <div class="section-title">👤 Customer Collection & Aging Analysis</div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Aging Bucket — Pending Count</h3>
+      <div class="chart-sub">Number of defaulters in each bucket</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="agingCountChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Aging Bucket — Pending Amount (₹)</h3>
+      <div class="chart-sub">Total outstanding per bucket</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="agingAmountChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>⚠ Top 20 High-Pending Customers</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer ID</th>
+            <th>Ward</th>
+            <th>Supervisor</th>
+            <th class="text-right">Pending (₹)</th>
+            <th class="text-right">Days Overdue</th>
+            <th>Aging Bucket</th>
+          </tr>
+        </thead>
+        <tbody id="top-customer-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PROPERTY ANALYSIS ============ -->
+<div class="section" id="sec-property">
+  <div class="section-title">🏠 Property-Wise Analytics</div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Properties by Type</h3>
+      <div class="chart-sub">Distribution of property types</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="propTypeBar"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Recovery % by Property Type</h3>
+      <div class="chart-sub">Collection efficiency per type</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="propEffBar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Property Type Detailed Summary</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Property Type</th>
+            <th class="text-right">Count</th>
+            <th class="text-right">% Share</th>
+            <th class="text-right">Total Billed (₹)</th>
+            <th class="text-right">Total Collected (₹)</th>
+            <th class="text-right">Total Pending (₹)</th>
+            <th class="text-right">Recovery %</th>
+          </tr>
+        </thead>
+        <tbody id="prop-type-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SUBTYPE ANALYSIS ============ -->
+<div class="section" id="sec-subtype">
+  <div class="section-title">🏷 Property Sub-Type Analysis</div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Top 10 Sub-Types — Pending Amount</h3>
+      <div class="chart-sub">₹ outstanding per sub-type</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="subtypePendingChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Sub-Type Efficiency Ranking</h3>
+      <div class="chart-sub">Collection % per sub-type</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="subtypeEffChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Complete Sub-Type Summary</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sub-Type</th>
+            <th>Category</th>
+            <th class="text-right">Count</th>
+            <th class="text-right">Billed (₹)</th>
+            <th class="text-right">Collected (₹)</th>
+            <th class="text-right">Pending (₹)</th>
+            <th class="text-right">Efficiency</th>
+            <th>Progress</th>
+          </tr>
+        </thead>
+        <tbody id="subtype-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PENDING ANALYTICS ============ -->
+<div class="section" id="sec-pending">
+  <div class="section-title">⚠ Pending Amount Analytics</div>
+  
+  <div class="kpi-grid" id="pending-kpi-grid"></div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Ward-Wise Pending Ranking</h3>
+      <div class="chart-sub">Outstanding dues — all wards</div>
+      <div class="rank-list" id="ward-pending-rank"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Pending by Property Type</h3>
+      <div class="chart-sub">₹ distribution across types</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="pendingTypeDoughnut"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>🚨 High-Risk Overdue Accounts (180+ Days)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer ID</th>
+            <th>Ward</th>
+            <th>Supervisor</th>
+            <th class="text-right">Pending (₹)</th>
+            <th class="text-right">Days Overdue</th>
+            <th>Risk Level</th>
+          </tr>
+        </thead>
+        <tbody id="highrisk-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RECOVERY & FORECAST ============ -->
+<div class="section" id="sec-recovery">
+  <div class="section-title">📈 Recovery & Revenue Forecast</div>
+  
+  <div class="kpi-grid" id="recovery-kpi-grid"></div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Estimated Monthly Recovery Potential</h3>
+      <div class="chart-sub">Projected collections by ward (₹)</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="recoveryWardChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Defaulter Recovery Potential</h3>
+      <div class="chart-sub">Estimated recoverable vs stuck amounts</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="recoveryPotentialChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Collection Efficiency — All Wards Gauge View</h3>
+    <div class="chart-sub">Current collection performance per ward</div>
+    <div id="gauge-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:12px; padding:10px 0;"></div>
+  </div>
+</div>
+
+<!-- ============ SUPERVISOR PERFORMANCE ============ -->
+<div class="section" id="sec-supervisor">
+  <div class="section-title">👔 Supervisor Performance</div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <h3>Top 10 Supervisors — Collection Efficiency</h3>
+      <div class="chart-sub">% collected vs billed</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="supEffChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Top 10 Supervisors — Total Collected (₹)</h3>
+      <div class="chart-sub">Absolute collection performance</div>
+      <div class="chart-wrap" style="height:300px">
+        <canvas id="supCollChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h3>Supervisor Performance Ranking</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Supervisor</th>
+            <th class="text-right">Properties</th>
+            <th class="text-right">Billed (₹)</th>
+            <th class="text-right">Collected (₹)</th>
+            <th class="text-right">Pending (₹)</th>
+            <th class="text-right">Efficiency</th>
+            <th>Rating</th>
+          </tr>
+        </thead>
+        <tbody id="supervisor-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .main -->
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const DATA = {
+  kpis: {
+    total_properties: 53780,
+    total_billed: 22196575,
+    total_collected: 6059891,
+    total_pending: 16284439,
+    overall_efficiency: 27.3,
+    active_defaulters: 41043,
+    best_ward: "22-Badhri Nagar",
+    worst_ward: "65-Holi Gali",
+    estimated_recoverable: 10584885
+  },
+  wards: [
+    {ward:"02-Ambedkar Nagar",count:3552,billed:1683060,collected:437090,pending:1246560,efficiency:26.0,defaulters:2626},
+    {ward:"04-Ishapur Yamunapar",count:3195,billed:1022990,collected:293181,pending:729809,efficiency:28.7,defaulters:2361},
+    {ward:"05-Bharatpur Gate",count:1496,billed:644345,collected:128925,pending:515420,efficiency:20.0,defaulters:1300},
+    {ward:"07-Lohvan",count:6018,billed:2281490,collected:722980,pending:1589310,efficiency:31.7,defaulters:4763},
+    {ward:"14-Lakshmi Nagar Yamunapar",count:1882,billed:1322630,collected:247185,pending:1083645,efficiency:18.7,defaulters:1160},
+    {ward:"18-General ganj",count:2549,billed:959885,collected:349915,pending:611530,efficiency:36.5,defaulters:1972},
+    {ward:"19-Ramnagar Yamunapar",count:3344,billed:1928490,collected:273985,pending:1662905,efficiency:14.2,defaulters:2568},
+    {ward:"22-Badhri Nagar",count:2544,billed:714505,collected:361703,pending:354182,efficiency:50.6,defaulters:1817},
+    {ward:"23-Aheer Pada",count:1826,billed:472350,collected:157730,pending:314820,efficiency:33.4,defaulters:1344},
+    {ward:"26-Naya Nagla",count:2309,billed:903115,collected:279245,pending:623870,efficiency:30.9,defaulters:1978},
+    {ward:"35-Bankhandi",count:2739,billed:968520,collected:191755,pending:776765,efficiency:19.8,defaulters:2349},
+    {ward:"40-Rajkumar",count:1219,billed:213625,collected:51075,pending:162550,efficiency:23.9,defaulters:1112},
+    {ward:"42-Manoharpur",count:2638,billed:873595,collected:148466,pending:731679,efficiency:17.0,defaulters:2028},
+    {ward:"49-Daimpiriyal Nagar",count:3476,billed:1955240,collected:882845,pending:1129645,efficiency:45.2,defaulters:3128},
+    {ward:"53-Krishna Puri",count:2064,billed:770980,collected:323790,pending:448940,efficiency:42.0,defaulters:1719},
+    {ward:"61-Chaubia Para",count:2821,billed:1035775,collected:149180,pending:905095,efficiency:14.4,defaulters:2363},
+    {ward:"63-Maliyaan Sadar",count:3248,billed:1081010,collected:302761,pending:781249,efficiency:28.0,defaulters:2297},
+    {ward:"64-Ghati Bahalray",count:1432,billed:428285,collected:75955,pending:352330,efficiency:17.7,defaulters:1282},
+    {ward:"65-Holi Gali",count:3334,billed:1468155,collected:202835,pending:1270845,efficiency:13.8,defaulters:3028},
+    {ward:"68-Shanti Nagar",count:2094,billed:1468530,collected:479290,pending:993290,efficiency:32.6,defaulters:1577}
+  ],
+  subtypes: [
+    {subtype:"MIG (200 Sq.Mtr.)",type:"Residential",count:31388,billed:9683850,collected:2453775,pending:7230535,efficiency:25.3},
+    {subtype:"EWS (1 BHK)",type:"Residential",count:11163,billed:265320,collected:218950,pending:46550,efficiency:82.5},
+    {subtype:"Shop (Mini)",type:"Commercial",count:6660,billed:4029900,collected:466450,pending:3577500,efficiency:11.6},
+    {subtype:"Bakery & Sweet (1000-1999 Sqft)",type:"Commercial",count:1315,billed:812175,collected:697900,pending:116200,efficiency:85.9},
+    {subtype:"HIG (200 Sq.Mtr.)",type:"Residential",count:1075,billed:523320,collected:162390,pending:361220,efficiency:31.0},
+    {subtype:"Shop (Small)",type:"Commercial",count:588,billed:870800,collected:149350,pending:723300,efficiency:17.2},
+    {subtype:"LIG",type:"Residential",count:363,billed:101960,collected:15780,pending:86180,efficiency:15.5},
+    {subtype:"Shop (Medium)",type:"Commercial",count:225,billed:857000,collected:93500,pending:790900,efficiency:10.9},
+    {subtype:"Shop (Mini II)",type:"Commercial",count:215,billed:217950,collected:30500,pending:190200,efficiency:14.0},
+    {subtype:"Shop (Juice)",type:"Commercial",count:211,billed:570600,collected:194470,pending:376130,efficiency:34.1},
+    {subtype:"Dharamshala (Non-AC)",type:"Commercial",count:77,billed:252700,collected:99900,pending:154100,efficiency:39.5},
+    {subtype:"Bakery & Sweet (100-999 Sqft)",type:"Commercial",count:69,billed:274400,collected:91700,pending:182700,efficiency:33.4},
+    {subtype:"Shop (Large)",type:"Commercial",count:45,billed:283500,collected:42300,pending:241200,efficiency:14.9},
+    {subtype:"Gaushala (Per Cow)",type:"Commercial",count:42,billed:45300,collected:50200,pending:0,efficiency:100},
+    {subtype:"Hotel/Lodge (Up to 20 Beds)",type:"Commercial",count:41,billed:680750,collected:370850,pending:330650,efficiency:54.5},
+    {subtype:"Hospital (1-20 Beds)",type:"Commercial",count:32,billed:336000,collected:214000,pending:126000,efficiency:63.7},
+    {subtype:"Clinic (No Medical Waste)",type:"Commercial",count:28,billed:116000,collected:8000,pending:108300,efficiency:6.9},
+    {subtype:"Govt. School (Up to 500 Students)",type:"Institutional",count:23,billed:173250,collected:49300,pending:126950,efficiency:28.5},
+    {subtype:"Shop/Tea Shop (Residential Area)",type:"Commercial",count:17,billed:58200,collected:26200,pending:32000,efficiency:45.0},
+    {subtype:"Jhopdi",type:"Residential",count:44,billed:0,collected:1,pending:399,efficiency:0}
+  ],
+  property_types: [
+    {type:"Residential",count:44033,billed:10574450,collected:2850896,pending:7724884,efficiency:27.0},
+    {type:"Commercial",count:9701,billed:11196925,collected:3123695,pending:8216655,efficiency:27.9},
+    {type:"Institutional",count:36,billed:344700,collected:70300,pending:277400,efficiency:20.4},
+    {type:"Industrial",count:10,billed:80500,collected:15000,pending:65500,efficiency:18.6}
+  ],
+  supervisors: [
+    {supervisor:"Nagar Nigam M.V.",count:8211,billed:885375,collected:885395,pending:0,efficiency:100.0},
+    {supervisor:"Poonam Chauhan",count:1391,billed:1367370,collected:782515,pending:603755,efficiency:57.2},
+    {supervisor:"Yogesh Sharma",count:2462,billed:1740200,collected:668680,pending:1076220,efficiency:38.4},
+    {supervisor:"Happy Singh",count:1923,billed:967630,collected:435925,pending:532105,efficiency:45.1},
+    {supervisor:"Jaya Sharma",count:838,billed:1081160,collected:427440,pending:657770,efficiency:39.5},
+    {supervisor:"Vipin Kumar",count:1094,billed:1148755,collected:354735,pending:799820,efficiency:30.9},
+    {supervisor:"Abhishek Singh",count:1239,billed:739350,collected:323081,pending:416269,efficiency:43.7},
+    {supervisor:"Shubham Singh",count:587,billed:649020,collected:304665,pending:349880,efficiency:46.9},
+    {supervisor:"Vishal Singh",count:598,billed:497480,collected:275425,pending:222055,efficiency:55.4},
+    {supervisor:"Sachin Kumar Dhangar",count:1514,billed:653000,collected:272365,pending:380635,efficiency:41.7},
+    {supervisor:"Alok Verma",count:9,billed:238100,collected:224550,pending:53650,efficiency:94.3},
+    {supervisor:"Somdatta Braham",count:629,billed:415800,collected:162858,pending:253052,efficiency:39.2},
+    {supervisor:"Babita Bhardwaj",count:1364,billed:890980,collected:110015,pending:787965,efficiency:12.3},
+    {supervisor:"Abhishek Kumar Singh",count:311,billed:216610,collected:98910,pending:117700,efficiency:45.7},
+    {supervisor:"Prateek Panday",count:185,billed:241500,collected:98650,pending:142850,efficiency:40.8},
+    {supervisor:"Praveen",count:165,billed:123390,collected:87396,pending:35994,efficiency:70.8},
+    {supervisor:"Sundar Singh",count:268,billed:172090,collected:69841,pending:102539,efficiency:40.6},
+    {supervisor:"Hariom",count:2527,billed:1267420,collected:59480,pending:1207940,efficiency:4.7},
+    {supervisor:"Shivam",count:518,billed:234640,collected:59055,pending:183415,efficiency:25.2},
+    {supervisor:"Ravikumar",count:1287,billed:352295,collected:53570,pending:298725,efficiency:15.2}
+  ],
+  aging: [
+    {bucket:"0-30 Days",count:5025,pending:896875},
+    {bucket:"31-60 Days",count:1329,pending:300165},
+    {bucket:"61-90 Days",count:703,pending:176845},
+    {bucket:"91-180 Days",count:22783,pending:6122930},
+    {bucket:"180+ Days",count:11203,pending:8860425}
+  ],
+  top_pending_customers: [
+    {id:"MVNNYZ3237",name:"(Unnamed)",ward:"49-Daimpiriyal Nagar",pending:70000,days:151,supervisor:"GAURAV Thakur"},
+    {id:"MVNN7258VA",name:"(Unnamed)",ward:"19-Ramnagar Yamunapar",pending:56000,days:243,supervisor:"Babita Bhardwaj"},
+    {id:"MVNNWB7094",name:"(Unnamed)",ward:"02-Ambedkar Nagar",pending:42000,days:182,supervisor:"MAHAVEER"},
+    {id:"MVNNFF7221",name:"(Unnamed)",ward:"14-Lakshmi Nagar Yamunapar",pending:39200,days:243,supervisor:"Babita Bhardwaj"},
+    {id:"MVNNLN4024",name:"(Unnamed)",ward:"07-Lohvan",pending:39200,days:243,supervisor:"SUBHASH"},
+    {id:"MVNNAH2999",name:"(Unnamed)",ward:"07-Lohvan",pending:39200,days:243,supervisor:"SUBHASH"},
+    {id:"MVNNLO3083",name:"(Unnamed)",ward:"19-Ramnagar Yamunapar",pending:39200,days:243,supervisor:"SUBHASH"},
+    {id:"MVNNFM9293",name:"(Unnamed)",ward:"68-Shanti Nagar",pending:36000,days:320,supervisor:"Jaya Sharma"},
+    {id:"MVNNNO6427",name:"(Unnamed)",ward:"07-Lohvan",pending:30400,days:243,supervisor:"SUBHASH"},
+    {id:"MVNNZB7409",name:"(Unnamed)",ward:"68-Shanti Nagar",pending:30000,days:608,supervisor:"Jaya Sharma"},
+    {id:"MVNNFR8045",name:"(Unnamed)",ward:"19-Ramnagar Yamunapar",pending:28000,days:243,supervisor:"SUBHASH"},
+    {id:"MVNNHN1878",name:"(Unnamed)",ward:"19-Ramnagar Yamunapar",pending:27500,days:335,supervisor:"SUBHASH"},
+    {id:"MVNNPL6337",name:"(Unnamed)",ward:"49-Daimpiriyal Nagar",pending:27500,days:94,supervisor:"Alok Verma"},
+    {id:"MVNNND3193",name:"(Unnamed)",ward:"02-Ambedkar Nagar",pending:24500,days:212,supervisor:"Devesh"},
+    {id:"MVNNRI2429",name:"(Unnamed)",ward:"49-Daimpiriyal Nagar",pending:24500,days:192,supervisor:"Poonam Chauhan"},
+    {id:"MVNNJD2913",name:"(Unnamed)",ward:"68-Shanti Nagar",pending:22750,days:396,supervisor:"Jaya Sharma"},
+    {id:"MVNNXP1661",name:"(Unnamed)",ward:"68-Shanti Nagar",pending:22750,days:396,supervisor:"Jaya Sharma"},
+    {id:"MVNNHL5434",name:"(Unnamed)",ward:"68-Shanti Nagar",pending:22750,days:396,supervisor:"Jaya Sharma"},
+    {id:"MVNNME8042",name:"(Unnamed)",ward:"49-Daimpiriyal Nagar",pending:21000,days:182,supervisor:"GAURAV Thakur"},
+    {id:"MVNNET7970",name:"(Unnamed)",ward:"49-Daimpiriyal Nagar",pending:21000,days:182,supervisor:"GAURAV Thakur"}
+  ]
+};
+
+// ============================================================
+// UTILITIES
+// ============================================================
+const fmt = n => {
+  if(n >= 10000000) return '₹'+(n/10000000).toFixed(2)+'Cr';
+  if(n >= 100000) return '₹'+(n/100000).toFixed(1)+'L';
+  if(n >= 1000) return '₹'+(n/1000).toFixed(1)+'K';
+  return '₹'+n.toLocaleString('en-IN');
+};
+const fmtN = n => n.toLocaleString('en-IN');
+const effColor = e => e >= 50 ? '#4caf50' : e >= 30 ? '#f5a623' : '#ff4757';
+const agingBucket = days => {
+  if(!days) return 'Unknown';
+  if(days <= 30) return '0-30 Days';
+  if(days <= 60) return '31-60 Days';
+  if(days <= 90) return '61-90 Days';
+  if(days <= 180) return '91-180 Days';
+  return '180+ Days';
+};
+const agingBadge = days => {
+  if(!days) return '<span class="badge badge-blue">Unknown</span>';
+  if(days <= 30) return '<span class="badge badge-green">0-30 Days</span>';
+  if(days <= 60) return '<span class="badge badge-orange">31-60 Days</span>';
+  if(days <= 90) return '<span class="badge badge-orange">61-90 Days</span>';
+  if(days <= 180) return '<span class="badge badge-red">91-180 Days</span>';
+  return '<span class="badge badge-red" style="background:rgba(255,71,87,0.3)">180+ Days ⚠</span>';
+};
+
+// ============================================================
+// CHART DEFAULTS
+// ============================================================
+Chart.defaults.color = '#7a8aaa';
+Chart.defaults.borderColor = 'rgba(30,45,80,0.6)';
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+const chartColors = {
+  blue: '#00c9ff', orange: '#f5a623', pink: '#e84393',
+  green: '#4caf50', red: '#ff4757', purple: '#9b59b6',
+  teal: '#1abc9c', yellow: '#f1c40f'
+};
+const gradAlpha = (ctx, col, a1=0.8, a2=0.1) => {
+  const g = ctx.createLinearGradient(0,0,0,400);
+  g.addColorStop(0, col.replace(')',`,${a1})`).replace('rgb','rgba'));
+  g.addColorStop(1, col.replace(')',`,${a2})`).replace('rgb','rgba'));
+  return g;
+};
+
+// ============================================================
+// RENDER KPIs
+// ============================================================
+function renderKPIs() {
+  const k = DATA.kpis;
+  const cards = [
+    {label:'Total Properties',value:fmtN(k.total_properties),icon:'🏘',sub:'Registered across all wards',cls:'blue'},
+    {label:'Total Billed',value:fmt(k.total_billed),icon:'🧾',sub:'Cumulative demand raised',cls:'orange'},
+    {label:'Total Collected',value:fmt(k.total_collected),icon:'💰',sub:`${k.overall_efficiency}% of billed`,cls:'green'},
+    {label:'Total Pending',value:fmt(k.total_pending),icon:'⏳',sub:'Outstanding dues',cls:'red'},
+    {label:'Collection Efficiency',value:k.overall_efficiency+'%',icon:'📊',sub:'Overall recovery rate',cls:'blue'},
+    {label:'Active Defaulters',value:fmtN(k.active_defaulters),icon:'⚠',sub:`${((k.active_defaulters/k.total_properties)*100).toFixed(1)}% of properties`,cls:'warn'},
+    {label:'Best Ward',value:k.best_ward.split('-')[1]||k.best_ward,icon:'🏆',sub:k.best_ward+' — 50.6% efficiency',cls:'green'},
+    {label:'Worst Ward',value:k.worst_ward.split('-')[1]||k.worst_ward,icon:'🔻',sub:k.worst_ward+' — 13.8% efficiency',cls:'red'},
+    {label:'Est. Recoverable',value:fmt(k.estimated_recoverable),icon:'🎯',sub:'65% of pending (~this year)',cls:'pink'},
+  ];
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = cards.map(c=>`
+    <div class="kpi-card ${c.cls}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// RENDER WARD BAR CHART
+// ============================================================
+function renderWardBarChart() {
+  const wards = DATA.wards;
+  const labels = wards.map(w=>w.ward.split('-')[1]||w.ward);
+  new Chart(document.getElementById('wardBarChart'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Billed',data:wards.map(w=>w.billed),backgroundColor:'rgba(0,201,255,0.3)',borderColor:'#00c9ff',borderWidth:1},
+        {label:'Collected',data:wards.map(w=>w.collected),backgroundColor:'rgba(76,175,80,0.5)',borderColor:'#4caf50',borderWidth:1},
+        {label:'Pending',data:wards.map(w=>w.pending),backgroundColor:'rgba(255,71,87,0.4)',borderColor:'#ff4757',borderWidth:1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales:{x:{ticks:{maxRotation:45}},y:{ticks:{callback:v=>fmt(v)}}}
+    }
+  });
+}
+
+// ============================================================
+// PROPERTY TYPE PIE
+// ============================================================
+function renderPropTypePie() {
+  new Chart(document.getElementById('propTypePie'), {
+    type:'doughnut',
+    data:{
+      labels:DATA.property_types.map(p=>p.type),
+      datasets:[{
+        data:DATA.property_types.map(p=>p.count),
+        backgroundColor:['rgba(0,201,255,0.7)','rgba(245,166,35,0.7)','rgba(232,67,147,0.7)','rgba(76,175,80,0.7)'],
+        borderColor:'#0a0e1a',borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtN(c.raw)} (${((c.raw/53780)*100).toFixed(1)}%)`}}}
+    }
+  });
+}
+
+// ============================================================
+// HEATMAP
+// ============================================================
+function renderHeatmap() {
+  const cont = document.getElementById('heatmap-container');
+  const sorted = [...DATA.wards].sort((a,b)=>b.efficiency-a.efficiency);
+  const getColor = eff => {
+    if(eff >= 50) return 'linear-gradient(135deg,#1a5c20,#2d8a36)';
+    if(eff >= 35) return 'linear-gradient(135deg,#5c4a00,#8a7000)';
+    if(eff >= 20) return 'linear-gradient(135deg,#7a2500,#b53700)';
+    return 'linear-gradient(135deg,#5c0010,#8a001a)';
+  };
+  cont.innerHTML = `<div class="heatmap-grid">${sorted.map(w=>`
+    <div class="heatmap-cell" style="background:${getColor(w.efficiency)};border:1px solid rgba(255,255,255,0.1)">
+      <div class="hc-ward">${w.ward.replace(/^\d+-/,'')}</div>
+      <div class="hc-eff">${w.efficiency}%</div>
+      <div class="hc-label">${fmtN(w.count)} props</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+// ============================================================
+// AGING CHART (executive)
+// ============================================================
+function renderAgingChart() {
+  const colors = ['#4caf50','#f5a623','#e84393','#ff4757','#9b59b6'];
+  new Chart(document.getElementById('agingChart'), {
+    type:'bar',
+    data:{
+      labels:DATA.aging.map(a=>a.bucket),
+      datasets:[{
+        label:'Pending (₹)',
+        data:DATA.aging.map(a=>a.pending),
+        backgroundColor:colors.map(c=>c+'bb'),
+        borderColor:colors,borderWidth:1.5,borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${fmt(c.raw)}`}}},
+      scales:{y:{ticks:{callback:v=>fmt(v)}}}
+    }
+  });
+  // Aging buckets
+  const bucketColors = ['#4caf50','#f5a623','#e84393','#ff4757','#9b59b6'];
+  document.getElementById('aging-buckets').innerHTML = DATA.aging.map((a,i)=>`
+    <div class="aging-bucket" style="border-color:${bucketColors[i]}44">
+      <div class="ab-label">${a.bucket}</div>
+      <div class="ab-count" style="color:${bucketColors[i]}">${fmtN(a.count)}</div>
+      <div class="ab-amount" style="color:${bucketColors[i]}">${fmt(a.pending)}</div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// WARD ANALYSIS SECTION
+// ============================================================
+function renderWardSection() {
+  // Top 10 pending wards
+  const topPending = [...DATA.wards].sort((a,b)=>b.pending-a.pending).slice(0,10);
+  new Chart(document.getElementById('wardPendingChart'), {
+    type:'bar',
+    data:{
+      labels:topPending.map(w=>w.ward.replace(/^\d+-/,'')),
+      datasets:[{
+        label:'Pending (₹)',
+        data:topPending.map(w=>w.pending),
+        backgroundColor:'rgba(255,71,87,0.6)',borderColor:'#ff4757',borderWidth:1.5,
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>fmt(v)}}}
+    }
+  });
+
+  // Top 10 efficiency
+  const topEff = [...DATA.wards].sort((a,b)=>b.efficiency-a.efficiency).slice(0,10);
+  new Chart(document.getElementById('wardEffChart'), {
+    type:'bar',
+    data:{
+      labels:topEff.map(w=>w.ward.replace(/^\d+-/,'')),
+      datasets:[{
+        label:'Efficiency %',
+        data:topEff.map(w=>w.efficiency),
+        backgroundColor: topEff.map(w=>effColor(w.efficiency)+'bb'),
+        borderColor: topEff.map(w=>effColor(w.efficiency)),
+        borderWidth:1.5,borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}
+    }
+  });
+
+  // Ward table
+  const sorted = [...DATA.wards].sort((a,b)=>b.pending-a.pending);
+  document.getElementById('ward-table-body').innerHTML = sorted.map(w=>{
+    const badge = w.efficiency>=40?'badge-green':w.efficiency>=25?'badge-orange':'badge-red';
+    const statusText = w.efficiency>=40?'Good':w.efficiency>=25?'Average':'Poor';
+    return `<tr>
+      <td class="text-blue">${w.ward}</td>
+      <td class="text-right mono">${fmtN(w.count)}</td>
+      <td class="text-right mono">${fmt(w.billed)}</td>
+      <td class="text-right mono text-green">${fmt(w.collected)}</td>
+      <td class="text-right mono text-red">${fmt(w.pending)}</td>
+      <td class="text-right">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <span style="color:${effColor(w.efficiency)}">${w.efficiency}%</span>
+          <div class="progress-wrap" style="width:60px"><div class="progress-fill" style="width:${w.efficiency}%;background:${effColor(w.efficiency)}"></div></div>
+        </div>
+      </td>
+      <td class="text-right mono text-orange">${fmtN(w.defaulters)}</td>
+      <td><span class="badge ${badge}">${statusText}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// CUSTOMER / AGING SECTION
+// ============================================================
+function renderCustomerSection() {
+  const colors = ['#4caf50','#f5a623','#e84393','#ff4757','#9b59b6'];
+  
+  new Chart(document.getElementById('agingCountChart'), {
+    type:'doughnut',
+    data:{
+      labels:DATA.aging.map(a=>a.bucket),
+      datasets:[{data:DATA.aging.map(a=>a.count),backgroundColor:colors.map(c=>c+'cc'),borderColor:'#0a0e1a',borderWidth:2}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtN(c.raw)} accounts`}}}}
+  });
+  
+  new Chart(document.getElementById('agingAmountChart'), {
+    type:'bar',
+    data:{
+      labels:DATA.aging.map(a=>a.bucket),
+      datasets:[{label:'Pending',data:DATA.aging.map(a=>a.pending),
+        backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:1.5,borderRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{y:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  document.getElementById('top-customer-body').innerHTML = DATA.top_pending_customers.map((c,i)=>`
+    <tr>
+      <td class="text-muted mono">${i+1}</td>
+      <td class="text-blue mono">${c.id}</td>
+      <td>${c.ward}</td>
+      <td>${c.supervisor}</td>
+      <td class="text-right mono text-red">₹${fmtN(c.pending)}</td>
+      <td class="text-right mono" style="color:${c.days>180?'#ff4757':c.days>90?'#f5a623':'#e8edf8'}">${c.days||'—'}</td>
+      <td>${agingBadge(c.days)}</td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// PROPERTY SECTION
+// ============================================================
+function renderPropertySection() {
+  new Chart(document.getElementById('propTypeBar'), {
+    type:'bar',
+    data:{
+      labels:DATA.property_types.map(p=>p.type),
+      datasets:[
+        {label:'Properties',data:DATA.property_types.map(p=>p.count),
+         backgroundColor:['rgba(0,201,255,0.6)','rgba(245,166,35,0.6)','rgba(232,67,147,0.6)','rgba(76,175,80,0.6)'],
+         borderRadius:6}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>fmtN(v)}}}}
+  });
+  
+  new Chart(document.getElementById('propEffBar'), {
+    type:'bar',
+    data:{
+      labels:DATA.property_types.map(p=>p.type),
+      datasets:[{label:'Efficiency %',data:DATA.property_types.map(p=>p.efficiency),
+        backgroundColor:DATA.property_types.map(p=>effColor(p.efficiency)+'99'),
+        borderColor:DATA.property_types.map(p=>effColor(p.efficiency)),
+        borderWidth:1.5,borderRadius:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  const total = DATA.property_types.reduce((s,p)=>s+p.count,0);
+  document.getElementById('prop-type-body').innerHTML = DATA.property_types.map(p=>`
+    <tr>
+      <td style="font-weight:600">${p.type}</td>
+      <td class="text-right mono">${fmtN(p.count)}</td>
+      <td class="text-right mono">${((p.count/total)*100).toFixed(1)}%</td>
+      <td class="text-right mono">${fmt(p.billed)}</td>
+      <td class="text-right mono text-green">${fmt(p.collected)}</td>
+      <td class="text-right mono text-red">${fmt(p.pending)}</td>
+      <td class="text-right">
+        <span style="color:${effColor(p.efficiency)};font-weight:600">${p.efficiency}%</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// SUBTYPE SECTION
+// ============================================================
+function renderSubtypeSection() {
+  const top10Pending = [...DATA.subtypes].sort((a,b)=>b.pending-a.pending).slice(0,10);
+  new Chart(document.getElementById('subtypePendingChart'), {
+    type:'bar',
+    data:{
+      labels:top10Pending.map(s=>s.subtype.length>20?s.subtype.slice(0,20)+'…':s.subtype),
+      datasets:[{label:'Pending',data:top10Pending.map(s=>s.pending),
+        backgroundColor:'rgba(255,71,87,0.55)',borderColor:'#ff4757',borderWidth:1.5,borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  const byEff = [...DATA.subtypes].filter(s=>s.billed>0).sort((a,b)=>b.efficiency-a.efficiency).slice(0,10);
+  new Chart(document.getElementById('subtypeEffChart'), {
+    type:'bar',
+    data:{
+      labels:byEff.map(s=>s.subtype.length>20?s.subtype.slice(0,20)+'…':s.subtype),
+      datasets:[{label:'Efficiency %',data:byEff.map(s=>Math.min(s.efficiency,100)),
+        backgroundColor:byEff.map(s=>effColor(s.efficiency)+'99'),
+        borderColor:byEff.map(s=>effColor(s.efficiency)),borderWidth:1.5,borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  const typeBadge = t => t==='Residential'?'badge-blue':t==='Commercial'?'badge-orange':t==='Institutional'?'badge-green':'badge-red';
+  document.getElementById('subtype-table-body').innerHTML = DATA.subtypes.map(s=>`
+    <tr>
+      <td style="font-size:11px">${s.subtype}</td>
+      <td><span class="badge ${typeBadge(s.type)}">${s.type}</span></td>
+      <td class="text-right mono">${fmtN(s.count)}</td>
+      <td class="text-right mono">${fmt(s.billed)}</td>
+      <td class="text-right mono text-green">${fmt(s.collected)}</td>
+      <td class="text-right mono text-red">${fmt(Math.max(0,s.pending))}</td>
+      <td class="text-right">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <span style="color:${effColor(s.efficiency)}">${s.efficiency}%</span>
+          <div class="progress-wrap" style="width:50px"><div class="progress-fill" style="width:${Math.min(s.efficiency,100)}%;background:${effColor(s.efficiency)}"></div></div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// PENDING ANALYTICS SECTION
+// ============================================================
+function renderPendingSection() {
+  const k = DATA.kpis;
+  const cards = [
+    {label:'Total Outstanding',value:fmt(k.total_pending),icon:'💸',sub:'Across all wards',cls:'red'},
+    {label:'180+ Day Accounts',value:fmtN(DATA.aging[4].count),icon:'🚨',sub:fmt(DATA.aging[4].pending)+' at risk',cls:'warn'},
+    {label:'91-180 Day Accounts',value:fmtN(DATA.aging[3].count),icon:'⚠',sub:fmt(DATA.aging[3].pending)+' overdue',cls:'orange'},
+    {label:'High Risk Amount',value:fmt(DATA.aging[3].pending+DATA.aging[4].pending),icon:'🔴',sub:'91+ day overdue total',cls:'red'},
+    {label:'Est. Recoverable',value:fmt(k.estimated_recoverable),icon:'💡',sub:'65% of pending',cls:'green'},
+    {label:'Worst Ward Pending',value:fmt(DATA.wards.find(w=>w.ward==='19-Ramnagar Yamunapar').pending),icon:'📍',sub:'19-Ramnagar Yamunapar',cls:'pink'},
+  ];
+  document.getElementById('pending-kpi-grid').innerHTML = cards.map(c=>`
+    <div class="kpi-card ${c.cls}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+
+  // Ward pending rank
+  const sorted = [...DATA.wards].sort((a,b)=>b.pending-a.pending);
+  const maxP = sorted[0].pending;
+  const rankColors = ['gold','silver','bronze','other','other','other','other','other','other','other'];
+  document.getElementById('ward-pending-rank').innerHTML = sorted.map((w,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${rankColors[i]||'other'}">${i+1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${w.ward}</div>
+        <div class="progress-wrap" style="margin-top:4px"><div class="progress-fill" style="width:${(w.pending/maxP*100).toFixed(0)}%;background:#ff4757"></div></div>
+      </div>
+      <div class="rank-val">${fmt(w.pending)}</div>
+    </div>
+  `).join('');
+
+  // Pending type doughnut
+  new Chart(document.getElementById('pendingTypeDoughnut'), {
+    type:'doughnut',
+    data:{
+      labels:DATA.property_types.map(p=>p.type),
+      datasets:[{data:DATA.property_types.map(p=>p.pending),
+        backgroundColor:['rgba(0,201,255,0.7)','rgba(245,166,35,0.7)','rgba(232,67,147,0.7)','rgba(76,175,80,0.7)'],
+        borderColor:'#0a0e1a',borderWidth:2}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}
+  });
+
+  // High risk table
+  const highRisk = DATA.top_pending_customers.filter(c=>c.days>=180);
+  document.getElementById('highrisk-body').innerHTML = highRisk.map((c,i)=>`
+    <tr>
+      <td class="text-muted">${i+1}</td>
+      <td class="text-blue mono">${c.id}</td>
+      <td>${c.ward}</td>
+      <td>${c.supervisor}</td>
+      <td class="text-right mono text-red" style="font-weight:600">₹${fmtN(c.pending)}</td>
+      <td class="text-right mono" style="color:#ff4757">${c.days}</td>
+      <td><span class="badge badge-red">🚨 CRITICAL</span></td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// RECOVERY SECTION
+// ============================================================
+function renderRecoverySection() {
+  const k = DATA.kpis;
+  const monthlyRecovery = Math.round(k.total_collected / 12);
+  const cards = [
+    {label:'Est. Monthly Recovery',value:fmt(monthlyRecovery),icon:'📅',sub:'Based on avg collection rate',cls:'green'},
+    {label:'Est. Annual Recovery',value:fmt(k.total_collected),icon:'📆',sub:'If current trend continues',cls:'blue'},
+    {label:'Recovery Potential',value:fmt(k.estimated_recoverable),icon:'🎯',sub:'Realistic 65% of pending',cls:'orange'},
+    {label:'Total Defaulters',value:fmtN(k.active_defaulters),icon:'👥',sub:'Need targeted follow-up',cls:'red'},
+    {label:'Avg Efficiency',value:k.overall_efficiency+'%',icon:'📊',sub:'Target: 60%+',cls:'pink'},
+    {label:'Improvement Potential',value:fmt(k.total_pending*0.33),icon:'🚀',sub:'If efficiency improves to 60%',cls:'green'},
+  ];
+  document.getElementById('recovery-kpi-grid').innerHTML = cards.map(c=>`
+    <div class="kpi-card ${c.cls}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+
+  // Recovery ward chart
+  const wards = [...DATA.wards].sort((a,b)=>b.collected-a.collected).slice(0,10);
+  new Chart(document.getElementById('recoveryWardChart'), {
+    type:'bar',
+    data:{
+      labels:wards.map(w=>w.ward.replace(/^\d+-/,'')),
+      datasets:[
+        {label:'Collected',data:wards.map(w=>w.collected),backgroundColor:'rgba(76,175,80,0.6)',borderColor:'#4caf50',borderWidth:1.5,borderRadius:4},
+        {label:'Pending',data:wards.map(w=>w.pending),backgroundColor:'rgba(255,71,87,0.4)',borderColor:'#ff4757',borderWidth:1.5,borderRadius:4}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales:{y:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  // Recovery potential pie
+  new Chart(document.getElementById('recoveryPotentialChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Already Collected','Est. Recoverable','Hard to Recover'],
+      datasets:[{
+        data:[k.total_collected, k.estimated_recoverable, k.total_pending - k.estimated_recoverable],
+        backgroundColor:['rgba(76,175,80,0.7)','rgba(0,201,255,0.7)','rgba(255,71,87,0.5)'],
+        borderColor:'#0a0e1a',borderWidth:2
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}
+  });
+
+  // Gauge grid
+  const gaugeGrid = document.getElementById('gauge-grid');
+  gaugeGrid.innerHTML = DATA.wards.map(w=>{
+    const col = effColor(w.efficiency);
+    const pct = w.efficiency;
+    return `<div class="sup-card">
+      <div class="sup-name" style="font-size:11px;color:var(--muted)">${w.ward}</div>
+      <div class="sup-eff" style="color:${col}">${pct}%</div>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="sup-stats"><span>${fmtN(w.count)} props</span><span style="color:${col}">${fmt(w.collected)} collected</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// SUPERVISOR SECTION
+// ============================================================
+function renderSupervisorSection() {
+  const sups = DATA.supervisors.filter(s=>s.supervisor!='Nagar Nigam M.V.');
+  const top10Eff = [...sups].sort((a,b)=>b.efficiency-a.efficiency).slice(0,10);
+  const top10Coll = [...sups].sort((a,b)=>b.collected-a.collected).slice(0,10);
+
+  new Chart(document.getElementById('supEffChart'), {
+    type:'bar',
+    data:{
+      labels:top10Eff.map(s=>s.supervisor.length>15?s.supervisor.slice(0,15)+'…':s.supervisor),
+      datasets:[{label:'Efficiency %',data:top10Eff.map(s=>s.efficiency),
+        backgroundColor:top10Eff.map(s=>effColor(s.efficiency)+'99'),
+        borderColor:top10Eff.map(s=>effColor(s.efficiency)),borderWidth:1.5,borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{x:{max:100,ticks:{callback:v=>v+'%'}}}}
+  });
+
+  new Chart(document.getElementById('supCollChart'), {
+    type:'bar',
+    data:{
+      labels:top10Coll.map(s=>s.supervisor.length>15?s.supervisor.slice(0,15)+'…':s.supervisor),
+      datasets:[{label:'Collected',data:top10Coll.map(s=>s.collected),
+        backgroundColor:'rgba(0,201,255,0.55)',borderColor:'#00c9ff',borderWidth:1.5,borderRadius:4}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{x:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  const ranked = [...DATA.supervisors].sort((a,b)=>b.efficiency-a.efficiency);
+  document.getElementById('supervisor-table-body').innerHTML = ranked.map((s,i)=>{
+    const stars = s.efficiency>=70?'⭐⭐⭐':s.efficiency>=40?'⭐⭐':s.efficiency>=20?'⭐':'—';
+    const badge = s.efficiency>=70?'badge-green':s.efficiency>=40?'badge-orange':'badge-red';
+    const rating = s.efficiency>=70?'Excellent':s.efficiency>=40?'Average':'Needs Improvement';
+    return `<tr>
+      <td class="text-muted mono">${i+1}</td>
+      <td style="font-weight:500">${s.supervisor}</td>
+      <td class="text-right mono">${fmtN(s.count)}</td>
+      <td class="text-right mono">${fmt(s.billed)}</td>
+      <td class="text-right mono text-green">${fmt(s.collected)}</td>
+      <td class="text-right mono text-red">${fmt(Math.max(0,s.pending))}</td>
+      <td class="text-right" style="color:${effColor(s.efficiency)};font-weight:600">${s.efficiency}%</td>
+      <td><span class="badge ${badge}">${stars} ${rating}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// FILTERS
+// ============================================================
+function populateFilters() {
+  const wardSel = document.getElementById('f-ward');
+  DATA.wards.forEach(w=>{
+    const o = document.createElement('option');
+    o.value = w.ward; o.textContent = w.ward;
+    wardSel.appendChild(o);
+  });
+  const supSel = document.getElementById('f-supervisor');
+  DATA.supervisors.forEach(s=>{
+    const o = document.createElement('option');
+    o.value = s.supervisor; o.textContent = s.supervisor;
+    supSel.appendChild(o);
+  });
+}
+function applyFilters() {
+  const ward = document.getElementById('f-ward').value;
+  const type = document.getElementById('f-type').value;
+  const sup = document.getElementById('f-supervisor').value;
+  const status = document.getElementById('f-status').value;
+  let count = 53780;
+  if(ward) { const w = DATA.wards.find(x=>x.ward===ward); count = w ? w.count : count; }
+  document.getElementById('filter-count').textContent = `Showing ~${fmtN(count)} records`;
+}
+function resetFilters() {
+  ['f-ward','f-type','f-supervisor','f-status'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filter-count').textContent = 'Showing all 53,780 records';
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+const rendered = {};
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('sec-'+id).classList.add('active');
+  if(!rendered[id]) {
+    rendered[id]=true;
+    if(id==='ward') renderWardSection();
+    if(id==='customer') renderCustomerSection();
+    if(id==='property') renderPropertySection();
+    if(id==='subtype') renderSubtypeSection();
+    if(id==='pending') renderPendingSection();
+    if(id==='recovery') renderRecoverySection();
+    if(id==='supervisor') renderSupervisorSection();
+  }
+}
+
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
+function exportCSV() {
+  const rows = [['Ward','Properties','Billed','Collected','Pending','Efficiency%','Defaulters']];
+  DATA.wards.forEach(w=>rows.push([w.ward,w.count,w.billed,w.collected,w.pending,w.efficiency,w.defaulters]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='UCC_Ward_Analytics.csv'; a.click();
+}
+function exportPDF() {
+  window.print();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderKPIs();
+  renderWardBarChart();
+  renderPropTypePie();
+  renderHeatmap();
+  renderAgingChart();
+  populateFilters();
+  rendered['executive'] = true;
+});
+</script>
+</body>
+</html>
